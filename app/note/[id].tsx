@@ -1,0 +1,18 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {Alert,AppState,Pressable,Text,View} from 'react-native';
+import {useLocalSearchParams,useRouter} from 'expo-router';
+import {notes} from '../../src/db';
+import {C,noteColors} from '../../src/design';
+import {Button,Field,Header,Screen} from '../../src/ui';
+export default function NoteEditor(){
+ const {id}=useLocalSearchParams<{id:string}>(),router=useRouter(),editing=id!=='new';
+ const [title,setTitle]=useState(''),[content,setContent]=useState(''),[tags,setTags]=useState(''),[color,setColor]=useState<string>(C.lavender),[pinned,setPinned]=useState(false),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(!editing),[dirty,setDirty]=useState(false);
+ const draftId=useRef<string|undefined>(editing?id:undefined),revision=useRef(0),chain=useRef<Promise<unknown>>(Promise.resolve());
+ useEffect(()=>{if(editing)notes.one(id).then(n=>{if(n){setTitle(n.title);setContent(n.content);setTags(n.tags??'');setColor(n.color_token||C.lavender);setPinned(!!n.is_pinned);}setLoaded(true);});},[id]);
+ function changed(){revision.current++;setDirty(true)}
+ function persist(){const version=revision.current,payload={title:title.trim()||'Untitled',content,color_token:color,is_pinned:pinned?1:0,tags};const work=async()=>{const saved=await notes.save(payload,draftId.current);draftId.current=saved;if(revision.current===version)setDirty(false);};chain.current=chain.current.then(work,work);return chain.current;}
+ useEffect(()=>{if(!loaded||!dirty||!(title.trim()||content.trim()))return;const timer=setTimeout(()=>{persist().catch(()=>{});},700);return ()=>clearTimeout(timer);},[title,content,tags,color,pinned,dirty,loaded]);
+ useEffect(()=>{const subscription=AppState.addEventListener('change',state=>{if(state==='background'&&loaded&&(title.trim()||content.trim()))persist().catch(()=>{});});return ()=>subscription.remove();},[loaded,title,content,tags,color,pinned]);
+ async function save(){if(busy)return;try{setBusy(true);await persist();router.back();}catch(e){Alert.alert('Could not save note',String(e));}finally{setBusy(false);}}
+ return <Screen><Header title={editing?'Edit note':'New note'} subtitle={dirty?'Saving changes...':'Changes saved locally'}/><Field label="Title" value={title} onChangeText={v=>{setTitle(v);changed();}} placeholder="Note title"/><Field label="Your note" value={content} onChangeText={v=>{setContent(v);changed();}} placeholder="Start writing..." multiline style={{minHeight:230}}/><Field label="Tags (comma separated)" value={tags} onChangeText={v=>{setTags(v);changed();}} placeholder="ideas, personal"/><Text style={{color:C.text,fontWeight:'600',fontSize:13,marginBottom:9}}>Color</Text><View style={{flexDirection:'row',gap:12,marginBottom:20}}>{noteColors.map(c=><Pressable key={c} accessibilityRole="button" accessibilityLabel={`Choose ${c} note color`} onPress={()=>{setColor(c);changed();}} style={{width:36,height:36,borderRadius:18,backgroundColor:c,borderWidth:color===c?2:1,borderColor:color===c?C.primary:C.border}}/>)}</View><Button label={pinned?'Pinned · tap to unpin':'Pin note'} icon="pin-outline" secondary onPress={()=>{setPinned(!pinned);changed();}}/><View style={{height:16}}/><Button label={busy?'Saving...':'Save note'} onPress={save} disabled={busy}/><View style={{height:10}}/><Button label="Done" secondary onPress={save}/>{editing?<View style={{marginTop:25}}><Button label="Delete note" danger onPress={()=>Alert.alert('Delete note?','This cannot be undone.',[{text:'Cancel',style:'cancel'},{text:'Delete',style:'destructive',onPress:async()=>{await notes.remove(id);router.back();}}])}/></View>:null}</Screen>
+}

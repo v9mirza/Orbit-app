@@ -1,0 +1,6 @@
+import React from 'react';
+import {Text,useWindowDimensions,View} from 'react-native';
+import {LineChart} from 'react-native-gifted-charts';
+import {C} from './design';
+import {money} from './utils';
+export function SpendingChart({values,currency='INR'}:{values:number[];currency?:string}){const {width}=useWindowDimensions();const max=Math.max(...values,1);if(values.every(x=>x===0))return <Text style={{color:C.muted,textAlign:'center',paddingVertical:28}}>No spending in this month yet.</Text>;const chartWidth=Math.max(220,width-105);const data=values.map((v,i)=>({value:v/100,label:i===0?'1':i===values.length-1?String(values.length):i%7===0?String(i+1):''}));return <View><Text style={{color:C.muted,fontSize:12,marginBottom:10}}>Daily spending · peak {money(max,currency)}</Text><LineChart data={data} width={chartWidth} height={130} spacing={chartWidth/Math.max(1,values.length-1)} initialSpacing={0} endSpacing={0} color={C.primary} thickness={2.5} hideDataPoints hideRules noOfSections={3} yAxisColor={C.border} xAxisColor={C.border} yAxisTextStyle={{color:C.muted,fontSize:10}} xAxisLabelTextStyle={{color:C.muted,fontSize:10}} yAxisLabelWidth={37} adjustToWidth={false} isAnimated={false}/></View>}

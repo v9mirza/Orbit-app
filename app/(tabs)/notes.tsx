@@ -1,0 +1,13 @@
+﻿import React,{useState} from 'react';
+import {Pressable,Text,View} from 'react-native';
+import {useRouter} from 'expo-router';
+import {Ionicons} from '@expo/vector-icons';
+import {notes} from '../../src/db';
+import {C} from '../../src/design';
+import {displayDate} from '../../src/utils';
+import {useRecords} from '../../src/hooks';
+import {Button,Card,Chip,Empty,Field,Header,IconButton,Screen,Section} from '../../src/ui';
+export default function Notes(){const router=useRouter(),[search,setSearch]=useState(''),[tag,setTag]=useState('');const {data}=useRecords(()=>notes.all(search,tag),[search,tag]);const {data:allData}=useRecords(()=>notes.all(),[]);const tags=[...new Set((allData??[]).flatMap(n=>(n.tags??'').split(', ').filter(Boolean)))];return <Screen><Header title="Notes" subtitle="A place for your thoughts." action={<IconButton name="add" label="New note" onPress={()=>router.push('/note/new')}/>}/><Field label="Search notes" value={search} onChangeText={setSearch} placeholder="Find a thought..."/>{tags.length?<View style={{flexDirection:'row',flexWrap:'wrap',marginBottom:8}}><Chip label="All" selected={!tag} onPress={()=>setTag('')}/>{tags.map(t=><Chip key={t} label={t} selected={tag===t} onPress={()=>setTag(t)}/>)}</View>:null}{data?.some(n=>n.is_pinned)?<Section title="Pinned"/>:null}{data?.filter(n=>n.is_pinned).map(n=><NoteCard key={n.id} note={n} onPress={()=>router.push(`/note/${n.id}`)}/>)}<Section title="All notes" action={<Button label="New note" icon="add" onPress={()=>router.push('/note/new')}/>}/>{data?.length?data.filter(n=>!n.is_pinned).map(n=><NoteCard key={n.id} note={n} onPress={()=>router.push(`/note/${n.id}`)}/>):<Empty icon="document-text-outline" title={search||tag?'No notes match your search.':'Capture a thought before it slips away.'} action={<Button label="Create note" onPress={()=>router.push('/note/new')}/>}/>}</Screen>}
+function NoteCard({note,onPress}:{note:Awaited<ReturnType<typeof notes.all>>[number];onPress:()=>void}){return <Pressable onPress={onPress} accessibilityRole="button"><Card style={{marginBottom:10,backgroundColor:note.color_token||C.lavender}}><View style={{flexDirection:'row',alignItems:'center',gap:8}}><Ionicons name="document-text-outline" size={18} color={C.primary}/><Text style={{flex:1,fontSize:16,color:C.text,fontWeight:'700'}} numberOfLines={1}>{note.title||'Untitled'}</Text>{note.is_pinned?<Ionicons name="pin" size={15} color={C.primary}/>:null}</View><Text style={{color:C.text,opacity:.8,marginTop:9,lineHeight:20}} numberOfLines={3}>{note.content||'Empty note'}</Text><Text style={{color:C.muted,fontSize:11,marginTop:12}}>{note.tags?`${note.tags} · `:''}{displayDate(note.updated_at)}</Text></Card></Pressable>}
+
+
