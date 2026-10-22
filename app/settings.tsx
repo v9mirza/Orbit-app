@@ -8,9 +8,11 @@ import {useRecords} from '../src/hooks';
 import {Button, Card, Chip, Field, Header, Logo, Screen, Section} from '../src/ui';
 import {chooseBackup, createBackup, restoreBackup} from '../src/backup';
 import type {OrbitBackup} from '../src/backup-format';
+import {useTour} from '../src/tour';
 
 export default function Settings() {
   const router = useRouter();
+  const {startTour} = useTour();
   const [categoryName, setCategoryName] = useState('');
   const [categoryType, setCategoryType] = useState<'expense' | 'income'>('expense');
   const [editing, setEditing] = useState('');
@@ -173,6 +175,12 @@ export default function Settings() {
         <Text style={{color: C.text, fontWeight: '700'}}>Stored on this device</Text>
         <Text style={{color: C.muted, lineHeight: 20, marginTop: 6, marginBottom: 16}}>Orbit works offline. Your personal records are held in its local SQLite database. There is no account or cloud sync.</Text>
         <Button label="Clear all personal data" danger onPress={confirmClear} />
+      </Card>
+
+      <Section title="Help" />
+      <Card>
+        <Text style={{color: C.muted, lineHeight: 20, marginBottom: 16}}>Take a quick look at Orbit’s main features whenever you want.</Text>
+        <Button label="Replay app tour" secondary onPress={startTour} />
       </Card>
 
       <Section title="About" />

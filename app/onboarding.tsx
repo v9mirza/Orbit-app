@@ -1,18 +1,18 @@
 import React, {useState} from 'react';
 import {Text, View} from 'react-native';
-import {useRouter} from 'expo-router';
 import {settings} from '../src/db';
 import {C} from '../src/design';
+import {useTour} from '../src/tour';
 import {Button, Field, Logo, Screen} from '../src/ui';
 
 export default function Onboarding() {
-  const router = useRouter();
+  const {startTour} = useTour();
   const [name, setName] = useState('');
 
   async function finish() {
     await settings.set('profileName', name.trim().replace(/\s+/g, ' '));
     await settings.set('onboarded', 'yes');
-    router.replace('/');
+    startTour();
   }
 
   return (
