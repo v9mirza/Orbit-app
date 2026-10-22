@@ -10,6 +10,28 @@ export function amountToMinor(input:string):number { const s=input.trim(); if(!/
 export const minorToInput=(n:number)=> (n/100).toFixed(2);
 export const money=(n:number,currency='INR')=>new Intl.NumberFormat(undefined,{style:'currency',currency,maximumFractionDigits:2}).format(n/100);
 export function nextDue(timestamp:number, rule:string):number { const d=new Date(timestamp); const day=d.getDate(); if(rule==='daily') d.setDate(day+1); else if(rule==='weekdays') { do d.setDate(d.getDate()+1); while([0,6].includes(d.getDay())); } else if(rule==='weekly') d.setDate(day+7); else if(rule==='monthly') { d.setDate(1); d.setMonth(d.getMonth()+1); d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate())); } return d.getTime(); }
+export function nextDueAfter(timestamp:number, rule:string, now=new Date(), anchorTimestamp=timestamp):number {
+  const anchor=new Date(anchorTimestamp);
+  const today=localDate(now);
+  const advance=(previous:number)=>{
+    if(rule==='monthly'){
+      const d=new Date(previous);
+      d.setDate(1);
+      d.setMonth(d.getMonth()+1);
+      d.setDate(Math.min(anchor.getDate(),new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));
+      return d.getTime();
+    }
+    return nextDue(previous,rule);
+  };
+  let next=advance(timestamp);
+  // Keep the original day for monthly tasks, including dates such as the 31st.
+  while(localDate(new Date(next))<=today){
+    const previous=next;
+    next=advance(previous);
+    if(next<=previous) throw new Error('Unsupported repeat schedule');
+  }
+  return next;
+}
 export const dueToday=(ms:number|null)=>ms!==null && localDate(new Date(ms))<=localDate();
 export function habitScheduled(rule:string,date:string):boolean { if(rule==='daily') return true; const dow=new Date(`${date}T12:00:00`).getDay(); return rule.split(',').includes(String(dow)); }
 export function streak(rule:string,start:string,completed:Set<string>,today=localDate()):number { let count=0; const d=new Date(`${today}T12:00:00`); for(let i=0;i<3660;i++){ const key=localDate(d); if(key<start) break; if(habitScheduled(rule,key)){ if(completed.has(key)) count++; else if(key!==today) break; } d.setDate(d.getDate()-1); } return count; }

@@ -1,7 +1,8 @@
-import React from 'react';
-import {View} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {AccessibilityInfo, Animated, View} from 'react-native';
 import {Tabs} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {C} from '../../src/design';
 
@@ -12,6 +13,33 @@ const items = [
   {name: 'todos', title: 'To-dos', icon: 'checkbox-outline', activeIcon: 'checkbox'},
   {name: 'habits', title: 'Habits', icon: 'repeat-outline', activeIcon: 'repeat'},
 ] as const;
+
+function TabIcon({focused, color, icon, activeIcon}: {
+  focused: boolean;
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+}) {
+  const selected = useRef(new Animated.Value(focused ? 1 : 0)).current;
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(reduced => {
+      if (!active) return;
+      if (reduced) selected.setValue(focused ? 1 : 0);
+      else Animated.timing(selected, {toValue: focused ? 1 : 0, duration: 190, useNativeDriver: true}).start();
+    }).catch(() => selected.setValue(focused ? 1 : 0));
+    return () => {active = false; selected.stopAnimation();};
+  }, [focused, selected]);
+
+  return (
+    <View style={{width: 48, height: 34, alignItems: 'center', justifyContent: 'center'}}>
+      <Animated.View style={{position: 'absolute', width: 48, height: 34, borderRadius: 12, backgroundColor: C.primarySoft, opacity: selected}} />
+      <Animated.View style={{transform: [{scale: selected.interpolate({inputRange: [0, 1], outputRange: [1, 1.08]})}]}}>
+        <Ionicons name={focused ? activeIcon : icon} size={22} color={color} />
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function Layout() {
   const insets = useSafeAreaInsets();
@@ -44,21 +72,9 @@ export default function Layout() {
           name={name}
           options={{
             title,
-            tabBarIcon: ({focused, color}) => (
-              <View
-                style={{
-                  width: 48,
-                  height: 34,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: focused ? C.primarySoft : 'transparent',
-                }}
-              >
-                <Ionicons name={focused ? activeIcon : icon} size={22} color={color} />
-              </View>
-            ),
+            tabBarIcon: ({focused, color}) => <TabIcon focused={focused} color={String(color)} icon={icon} activeIcon={activeIcon} />,
           }}
+          listeners={{tabPress: () => {void Haptics.selectionAsync().catch(() => {});}}}
         />
       ))}
     </Tabs>
